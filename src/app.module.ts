@@ -1,3 +1,7 @@
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { TaskModule } from './module/task/task.module';
+import { ProjectModule } from './module/project/project.module';
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -9,13 +13,18 @@ import { UserModule } from './module/user/user.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ThrottlerModule.forRoot([{ ttl: 60000, limit: 120 }]),
+    TaskModule,
+    ProjectModule,
     AuthModule,
     PrismaModule,
-    UserModule
+    UserModule,
   ],
   controllers: [AppController],
   providers: [
-    AppService
+    ThrottlerGuard,
+    { provide: APP_GUARD, useExisting: ThrottlerGuard },
+    AppService,
   ],
 })
 export class AppModule {}

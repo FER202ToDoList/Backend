@@ -3,8 +3,8 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
-import { getJwtSecretKey } from 'src/config/global-const';
-import { JwtPayloadDto } from 'src/dto/auth.dto';
+import { getJwtSecretKey } from '../../../config/global-const';
+import { JwtPayloadDto } from '../dto/auth.dto';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -15,7 +15,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: getJwtSecretKey(config)!,
+      secretOrKey: getJwtSecretKey(config),
     });
   }
 
@@ -24,11 +24,17 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       where: { id: payload.id },
     });
 
-    if (!user) {
+    if (!user || payload.tokenVersion !== user.tokenVersion) {
       throw new UnauthorizedException('Invalid user credentials');
     }
 
-    const { password, ...result } = user;
-    return result; // Tự động inject vào req.user
+    return {
+      id: user.id,
+      email: user.email,
+      fullName: user.fullName,
+      role: user.role,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    }; // Tự động inject vào req.user
   }
 }
