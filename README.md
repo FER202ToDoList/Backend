@@ -1,98 +1,48 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Taskflow backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+NestJS + Prisma + PostgreSQL. Features live in src/module/{auth,user,task,project,mail,prisma}, with controllers, services and module-owned DTOs. Swagger: http://localhost:3000/api. Health: GET /health.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Run locally
 
-## Description
+1. npm install
+2. Copy .env.example to .env only if no .env exists. Otherwise add the missing settings while keeping your database/JWT values.
+3. Start PostgreSQL: docker compose -f docker/docker-compose.yml up -d
+4. npm run prisma:generate
+5. npm run db:migrate
+6. npm run start:dev
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+Production: npm run build then npm run start:prod. ALLOWED_URLS is a comma-separated frontend origin allowlist. JWT_EXPIRES_IN is positive seconds (default 86400). FRONTEND_URL is the frontend receiving reset links.
 
-## Project setup
+## Email
 
-```bash
-$ npm install
-```
+Fill SMTP_USER with your Gmail address and SMTP_PASS with its app password. Defaults: smtp.gmail.com, port 587, SMTP_SECURE=false (STARTTLS). For port 465 use SMTP_SECURE=true. SMTP_FROM defaults to SMTP_USER. Keep mail credentials only in the backend .env.
 
-## Compile and run the project
+Reset tokens are random, hashed with SHA-256 in the database, single-use, and expire after 30 minutes. A new request replaces the previous link. Password reset atomically consumes the token and invalidates prior JWTs. Forgot-password returns the same response for unknown accounts and SMTP failures to avoid revealing account existence. Mail failures are logged without credentials/tokens. Email delivery requires SMTP configuration.
 
-```bash
-# development
-$ npm run start
+Auth routes have per-IP limits. The in-memory rate-limit store supports a single server; use a shared store when deploying multiple instances.
 
-# watch mode
-$ npm run start:dev
+## API
 
-# production mode
-$ npm run start:prod
-```
+| Method | Path | Body / purpose |
+| --- | --- | --- |
+| POST | /auth/register | fullName, email, password; returns public user fields |
+| POST | /auth/login | email, password; returns token |
+| GET | /auth/me | Current user profile |
+| POST | /auth/forgot-password | email |
+| POST | /auth/reset-password | token, password |
+| GET | /tasks | Owned tasks |
+| GET | /tasks/:id | Owned task detail |
+| POST | /tasks | title; optional description, isCompleted, dueDate, priority, projectId |
+| PATCH | /tasks/:id | Partial task fields |
+| DELETE | /tasks/:id | Delete owned task; 204 |
+| GET | /projects | Owned projects |
+| POST | /projects | name, optional hex color |
+| DELETE | /projects/:id | Delete project; its tasks move to Inbox; 204 |
 
-## Run tests
+Profile/task/project routes require a bearer token. Task IDs are integers; project IDs are UUIDs. Priority is 1–4. dueDate is YYYY-MM-DD or null; projectId is an owned project UUID or null. Unknown fields, invalid dates, empty titles and foreign ownership are rejected. Search/filter/sort happen in the frontend over the user's task list.
 
-```bash
-# unit tests
-$ npm run test
+The additive migration preserves existing users/tasks. Previous JWTs need a new login because tokens now contain tokenVersion. SQLite demo data is not migrated.
 
-# e2e tests
-$ npm run test:e2e
+## Tests
 
-# test coverage
-$ npm run test:cov
-```
-
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+npm test -- --runInBand runs unit tests. Full HTTP/browser tests are in ../taskflow/tests. test/start-test-server.cjs is test-only: it exposes captured mail, migrates a separate taskflow_e2e PostgreSQL schema using TEST_DATABASE_URL or DATABASE_URL, and disables rate limiting for repeated reset tests. Never deploy this test entrypoint. Production scripts do not load it.

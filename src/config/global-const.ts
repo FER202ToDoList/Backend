@@ -11,5 +11,8 @@ export const getJwtSecretKey = (configService: ConfigService): string => {
 };
 
 export const getJwtExpiresIn = (configService: ConfigService): number => {
-  return configService.get<number>('JWT_EXPIRES_IN') || 0;
+  const seconds = Number(configService.get('JWT_EXPIRES_IN', 86400));
+  if (!Number.isFinite(seconds) || seconds <= 0)
+    throw new Error('JWT_EXPIRES_IN must be positive seconds');
+  return seconds;
 };
