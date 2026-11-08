@@ -32,18 +32,29 @@ export class AuthService {
     });
     if (!user || !(await bcrypt.compare(dto.password, user.password)))
       throw new UnauthorizedException('Email or password is incorrect.');
+    const token = await this.jwtService.signAsync({
+      id: user.id,
+      tokenVersion: user.tokenVersion,
+    });
+    const claimed = await this.prisma.user.updateMany({
+      where: { id: user.id, onboardingPending: true },
+      data: { onboardingPending: false },
+    });
     return {
-      token: await this.jwtService.signAsync({
-        id: user.id,
-        tokenVersion: user.tokenVersion,
-      }),
+      showOnboarding: claimed.count === 1,
+      token,
     };
   }
   async register(dto: RegisterRequestDto) {
     const password = await bcrypt.hash(dto.password, 12);
     try {
       return await this.prisma.user.create({
-        data: { email: dto.email, fullName: dto.fullName, password },
+        data: {
+          email: dto.email,
+          fullName: dto.fullName,
+          password,
+          onboardingPending: true,
+        },
         select: { id: true, email: true, fullName: true, role: true },
       });
     } catch (error: unknown) {

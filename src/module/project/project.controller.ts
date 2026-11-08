@@ -8,11 +8,12 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Patch,
   Req,
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guard/jwt.guard';
-import { CreateProjectDto } from './dto/project.dto';
+import { CreateProjectDto, UpdateProjectDto } from './dto/project.dto';
 import { ProjectService } from './project.service';
 @Controller('projects')
 @UseGuards(JwtAuthGuard)
@@ -26,6 +27,13 @@ export class ProjectController {
     @Body() dto: CreateProjectDto,
   ) {
     return this.service.create(req.user.id, dto);
+  }
+  @Patch(':id') update(
+    @Req() req: AuthenticatedRequest,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateProjectDto,
+  ) {
+    return this.service.update(req.user.id, id, dto);
   }
   @Delete(':id') @HttpCode(204) remove(
     @Req() req: AuthenticatedRequest,

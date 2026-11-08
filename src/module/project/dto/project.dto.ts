@@ -1,10 +1,11 @@
+import { PartialType } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
   IsString,
   IsNotEmpty,
   MaxLength,
   Matches,
-  IsOptional,
+  ValidateIf,
 } from 'class-validator';
 export class CreateProjectDto {
   @Transform(({ value }: { value: unknown }) =>
@@ -14,5 +15,11 @@ export class CreateProjectDto {
   @IsNotEmpty()
   @MaxLength(60)
   name: string;
-  @IsOptional() @Matches(/^#[0-9a-f]{6}$/i) color?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @Matches(/^#[0-9a-f]{6}$/i)
+  color?: string;
 }
+
+export class UpdateProjectDto extends PartialType(CreateProjectDto, {
+  skipNullProperties: false,
+}) {}
