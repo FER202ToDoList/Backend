@@ -46,3 +46,14 @@ The additive migration preserves existing users/tasks. Previous JWTs need a new 
 ## Tests
 
 npm test -- --runInBand runs unit tests. Full HTTP/browser tests are in ../taskflow/tests. test/start-test-server.cjs is test-only: it exposes captured mail, migrates a separate taskflow_e2e PostgreSQL schema using TEST_DATABASE_URL or DATABASE_URL, and disables rate limiting for repeated reset tests. Never deploy this test entrypoint. Production scripts do not load it.
+
+
+## Frontend integration and first-login guide
+
+Apply the matching `taskflow` frontend update with this backend change.
+
+- `PATCH /projects/:id` updates an owned project's name and/or hex color. Unknown fields and explicit null values are rejected; another account receives 404.
+- Successful login returns `{ token, showOnboarding }`. Newly registered users are created with `onboardingPending=true`; the first successful login atomically consumes this flag. Wrong passwords do not consume it, and concurrent logins can receive `showOnboarding=true` at most once. The flag is consumed when the login response is issued, so interrupted/abandoned sessions do not trigger another automatic tour. Manual replay is frontend-only.
+- Migration `20261108140000_onboarding_first_login` adds a default-false flag, excluding existing accounts. Apply it with `npm run db:migrate` and regenerate Prisma before starting the updated backend.
+- There are no demo accounts or sample tasks. Registration creates a real, empty workspace.
+- Real reset email delivery requires SMTP settings and `FRONTEND_URL` matching the frontend. Local frontend uses port 5173. The backend API remains rooted at `/auth`, `/tasks`, `/projects`; `/api` is Swagger.

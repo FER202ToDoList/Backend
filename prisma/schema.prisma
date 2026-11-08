@@ -19,6 +19,7 @@ model User {
   projects  Project[]
   passwordReset PasswordReset?
   tokenVersion Int @default(0)
+  onboardingPending Boolean @default(false)
 
   @@map("users")
 }
